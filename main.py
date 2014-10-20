@@ -20,7 +20,7 @@ from oauth2client.file import Storage
 from oauth2client.tools import run
 from Peaps import PeapList
 
-NUM_DAYS = 30
+NUM_DAYS = 360
 
 def getAuthPython(secretFilePath):
     # Combine the relationship matrices of merged E-mail addresses
@@ -332,6 +332,7 @@ if __name__ == "__main__":
 
     # 5. this section is to reduce the nr of emails that will be processed
 
+    # TODO: think about speed vs. comprehensive data tradeoff
     response = filterResponse(response_all, 2)
 
     # 6. Process the inbox
@@ -354,7 +355,7 @@ if __name__ == "__main__":
 
     #scopeListPeapsID, scopeListValues = definePeapsInScope(pl, 150)
 
-    pl.definePeapsInScope(25)
+    pl.sortPeapsByScopeScore(25)
 
     # 9. Calculate priority as as a function of lastContacted and score for every peap. Potential improvement: we could modify this to calculate priority only for peaps in scope
 
@@ -379,6 +380,7 @@ if __name__ == "__main__":
 
     c = 0
     for peap in pl.list:
+        c+=1
         scopeScore = peap.getScopeScore()
         scopeStatusAutomatic = peap.getScopeStatusAutomatic()
 

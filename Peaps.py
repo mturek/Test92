@@ -6,6 +6,10 @@
 from parse_rest.datatypes import Object
 import difflib
 import Score_v2
+import datetime
+import calendar
+import numpy as np
+
 
 class parsePeap(Object):
     pass
@@ -85,7 +89,8 @@ class PeapList():
         sumOfWeightedNum = 0
 
         for peap in self.list:    
-            try:
+            #try:
+            if True:
                 #time, sender = Score_v2.get_time_sender(peap)
                 #parameters = Score_v2.convofit(sender, time)
 
@@ -109,10 +114,10 @@ class PeapList():
 
                 #log.write(peap.getName() +","+str(len(peap.getMessageIDs()))+","+str(NUM_DAYS)+","+str(theta)+"\n")
 
-                peap.setScopeScore(score)
+                #peap.setScopeScore(score)
 
-            except:
-                print "Exception: " + peap.getName()       
+            #except:
+            #    print "Exception: " + peap.getName()       
 
         # Normalize the weightedNum
         for peap in self.list:
