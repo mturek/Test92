@@ -111,6 +111,18 @@ def extractEmails(string):
     foundemail.extend(mailsrch.findall(string)) # this extends the previously named list via the "mailsrch" variable which was named before
     return foundemail
 
+def validateFieldValue(value):
+    if '\"' in value:
+        segments = value.split('\"')
+
+        #Even segments are within \" ... \" -> replace commas with ;
+        for index in range(1,len(segments),2):
+            segments[index] = segments[index].replace(",",";")
+
+        value = "".join(segments)
+
+    return value
+
 
 def Process_Inbox_peapFH(response, user, service, root, pl):
 
@@ -143,14 +155,17 @@ def Process_Inbox_peapFH(response, user, service, root, pl):
         Direction = -1
 
         #print x
-        if msg["payload"]["body"]["size"] != 0:
-            bodyParts = [msg["payload"]["body"]["data"]]
-        elif "parts" in msg["payload"].keys():
-            bodyParts = [part["body"]["data"] for part in msg["payload"]["parts"] if part["mimeType"] in ["text/plain", "text/html"] and "data" in part["body"].keys()] 
-        else:
-            bodyParts = []
+        # if msg["payload"]["body"]["size"] != 0:
+        #     bodyParts = [msg["payload"]["body"]["data"]]
+        # elif "parts" in msg["payload"].keys():
+        #     bodyParts = [part["body"]["data"] for part in msg["payload"]["parts"] if part["mimeType"] in ["text/plain", "text/html"] and "data" in part["body"].keys()] 
+        # else:
+        #     bodyParts = []
 
-        messageBody = " ".join([base64.urlsafe_b64decode(part.encode("UTF-8")).replace("\r\n","\n") for part in bodyParts])
+        # messageBody = " ".join([base64.urlsafe_b64decode(part.encode("UTF-8")).replace("\r\n","\n") for part in bodyParts])
+
+        #Placeholder for messageBody
+        messageBody = "N/A"
 
         for i in range(len(msg['payload']['headers'])):
             name = msg['payload']['headers'][i]['name']
@@ -165,8 +180,10 @@ def Process_Inbox_peapFH(response, user, service, root, pl):
                 # By using the function from merge.py, the following function gets the Email Address and the name from the Email. This info can later be used to perform merge
 
                 try:
-                    nameEmailList.append(Merge.get_name_and_email(value))
-                   # Merge.get_name_and_email(value)
+                    nameEmail = Merge.get_name_and_email(value)
+                    if not "Null" in nameEmail:
+                        nameEmailList.append(nameEmail)
+
                 except:
                     pass
 
@@ -179,19 +196,16 @@ def Process_Inbox_peapFH(response, user, service, root, pl):
 
 
             if name == 'To' and value != "":
-                if '\"' in value:
-                    segments = value.split('\"')
-
-                    #Even segments are within \" ... \" -> replace commas
-                    for index in range(1,len(segments),2):
-                        segments[index] = segments[index].replace(",",";")
-
-                    value = "".join(segments)
+                value = validateFieldValue(value)
 
                 pList = value.split(',')
                 for p in pList:
                     try:
-                        nameEmailList.append(Merge.get_name_and_email(p))
+                        nameEmail = Merge.get_name_and_email(p)
+                        if not "Null" in nameEmail:
+                            nameEmailList.append(nameEmail)
+                           
+                           # nameEmailList.append(Merge.get_name_and_email(p))
                         #print 'to',Merge.get_name_and_email(value)
                     except:
                         pass
@@ -201,14 +215,8 @@ def Process_Inbox_peapFH(response, user, service, root, pl):
                 countTo = len(vTo[0])
 
             if name == 'Cc' and value != "":
-                if '\"' in value:
-                    segments = value.split('\"')
 
-                    #Even segments are within \" ... \" -> replace commas
-                    for index in range(1,len(segments),2):
-                        segments[index] = segments[index].replace(",",";")
-
-                    value = "".join(segments)
+                value = validateFieldValue(value)
 
                 pList = value.split(',')
                 for p in pList:
@@ -221,14 +229,7 @@ def Process_Inbox_peapFH(response, user, service, root, pl):
                 vCc = extractEmailsAndName(value)
                 countCc = len(vCc[0])
             if name == 'Bcc' and value != "":
-                if '\"' in value:
-                    segments = value.split('\"')
-
-                    #Even segments are within \" ... \" -> replace commas
-                    for index in range(1,len(segments),2):
-                        segments[index] = segments[index].replace(",",";")
-
-                    value = "".join(segments)
+                value = validateFieldValue(value)
 
                 pList = value.split(',')
                 for p in pList:
