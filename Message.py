@@ -201,7 +201,7 @@ def Process_Inbox_peapFH(response, user, service, root, pl):
                 pList = value.split(',')
                 for p in pList:
                     try:
-                        nameEmail = Merge.get_name_and_email(p)
+                        nameEmail = Merge.get_name_and_email(p) 
                         if not "Null" in nameEmail:
                             nameEmailList.append(nameEmail)
                            
@@ -221,7 +221,10 @@ def Process_Inbox_peapFH(response, user, service, root, pl):
                 pList = value.split(',')
                 for p in pList:
                     try:
-                        nameEmailList.append(Merge.get_name_and_email(p))
+                        nameEmail = Merge.get_name_and_email(p) 
+                        if not "Null" in nameEmail:
+                            nameEmailList.append(nameEmail)
+                        #nameEmailList.append(Merge.get_name_and_email(p))
                         #print 'to',Merge.get_name_and_email(value)
                     except:
                         pass
@@ -234,7 +237,10 @@ def Process_Inbox_peapFH(response, user, service, root, pl):
                 pList = value.split(',')
                 for p in pList:
                     try:
-                        nameEmailList.append(Merge.get_name_and_email(p))
+                        nameEmail = Merge.get_name_and_email(p) 
+                        if not "Null" in nameEmail:
+                            nameEmailList.append(nameEmail)
+                        #nameEmailList.append(Merge.get_name_and_email(p))
                         #print 'to',Merge.get_name_and_email(value)
                     except:
                         pass
