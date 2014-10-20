@@ -120,7 +120,6 @@ def get_time_sender(peap):
     sender = []
     for id in peap.getMessageIDs():
 
-        """ MT EDIT """
         # Filter down to emails where userField is either To or From
         if not peap.getMessageByID(id)["userField"] in ["To", "From"]:
             # print "Skipping email for model since user is in the (" + pl.list[peapID].table[id][5] + ") field: " + pl.list[peapID].table[id][7] + ""
@@ -132,8 +131,6 @@ def get_time_sender(peap):
             #print "Skipping email since user and peap are both in " + peap.getMessageByID(id)["userField"]
             continue
 
-        """ END MT EDIT """
-
         time.append(peap.getMessageByID(id)["time"])
         if peap.getMessageByID(id)["direction"] == 1:
             sender.append(1)
@@ -142,7 +139,28 @@ def get_time_sender(peap):
 
     return time, sender 
 
-""" MT EDIT """
+# Return the ratio of emails received from peap to total number
+# Only consider emails where user and peap appear in the To/From fields
+def get_received_email_ratio(peap):
+    totalEmails = 0
+    receivedEmails = 0
+
+    for messageID in peap.getMessageIDs():
+        message = peap.getMessageByID(messageID)
+
+        if message["userField"] == "To" and message["peapField"] == "From":
+            receivedEmails += 1
+            totalEmails += 1
+        elif message["userField"] == "From" and message["peapField"] == "To":
+            totalEmails += 1
+
+    if totalEmails > 0:
+        return 1.0 * receivedEmails / totalEmails
+    else:
+        return 1
+
+
+
 def get_weighted_num_emails(peap):
     weighted_num_emails = 0
 
@@ -198,5 +216,3 @@ def get_weighted_num_emails(peap):
 
     return weighted_num_emails
         
-
-""" END MT EDIT """

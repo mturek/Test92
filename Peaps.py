@@ -5,6 +5,7 @@
 
 from parse_rest.datatypes import Object
 import difflib
+import Score_v2
 
 class parsePeap(Object):
     pass
@@ -39,7 +40,6 @@ class PeapList():
             if peap.ID == id:
                 return peap
 
-    """ MT EDIT """
     def getPeapByName(self, name, fuzzy=False, min_similarity=0.9):
         for peap in self.list:
             for peapName in peap.names:
@@ -56,9 +56,98 @@ class PeapList():
                 return peap
 
         return -1
-    """ END MT EDIT"""
 
-   
+    # Removes all peaps to whom the user never sent a personal email
+    def eliminatePeapsWithoutRelationship(self):
+        print "Starting elimination with " + str(len(self.list)) + " peaps"
+
+        eliminateIDs = []
+        
+        for peap in self.list:
+            eliminate = True
+
+            for messageID in peap.getMessageIDs():
+                if peap.getMessageByID(messageID)["userField"] == "From":
+                    eliminate = False
+
+            if eliminate:
+                eliminateIDs.append(peap.getID())
+
+        for eliminateID in eliminateIDs:
+            print "Eliminating: " + self.getPeapByID(eliminateID).getName()
+            self.removePeap(eliminateID)
+
+
+        print "Ending elimination with " + str(len(self.list)) + " peaps"
+
+
+    def calculateScopeScores(self):
+        sumOfWeightedNum = 0
+
+        for peap in self.list:    
+            try:
+                #time, sender = Score_v2.get_time_sender(peap)
+                #parameters = Score_v2.convofit(sender, time)
+
+
+                #theta = parameters[0]
+                #A = parameters[1]
+                weightedNum = Score_v2.get_weighted_num_emails(peap)
+                receivedEmailRatio = Score_v2.get_received_email_ratio(peap)
+                
+
+                peap.scopeInfo["normalizedNumEmails"] = weightedNum
+                peap.scopeInfo["receivedEmailRatio"] = receivedEmailRatio
+
+
+                sumOfWeightedNum += weightedNum
+
+
+                #score = weightedNum
+                #score = theta * (1-theta)
+                #score = 0.5*parameters[0]+0.5*parameters[1] # Using alpha and theta
+
+                #log.write(peap.getName() +","+str(len(peap.getMessageIDs()))+","+str(NUM_DAYS)+","+str(theta)+"\n")
+
+                peap.setScopeScore(score)
+
+            except:
+                print "Exception: " + peap.getName()       
+
+        # Normalize the weightedNum
+        for peap in self.list:
+            peap.scopeInfo["normalizedNumEmails"] = peap.scopeInfo["normalizedNumEmails"]/sumOfWeightedNum
+            #if peap.getScopeScore() != -1:
+            #    peap.setScopeScore(peap.getScopeScore()/sumOfWeightedNum)
+
+        # Assign final score:
+        for peap in self.list:
+            #score = <some combination of normalizedNumEmails and the ratio>
+            score = peap.scopeInfo["normalizedNumEmails"]
+            
+            peap.setScopeScore(score)
+
+
+    def sortPeapsByScopeScore(self, numInScope):
+        self.list.sort(key=lambda x: x.scopeInfo["scopeScore"], reverse=True)
+
+        for i in range(min(numInScope, len(self.list))):
+            self.list[i].scopeInfo["scopeStatusAutomatic"] = 1
+
+    def calculatePriorityScores(self):
+        d = datetime.datetime.utcnow()
+        now = calendar.timegm(d.utctimetuple())/(24*60*60.0)
+
+        for peap in self.list:
+            time_no_contact = now - peap.getLastContacted()
+            scopeScore = peap.getScopeScore()
+
+            # WE NEED A BETTER FUNCTION HERE
+            prio =  scopeScore * np.exp(-time_no_contact/10)
+
+            peap.setPriorityScore(prio)
+
+
 
 class Peap():
 
@@ -87,14 +176,14 @@ class Peap():
         "END DEPRECATED"""
 
         self.scopeInfo = {
+            "normalizedNumEmails":0,
+            "receivedEmailRatio":1,
             "lastContacted": -1,
             "scopeScore": -1,
             "priorityScore": -1,
             "scopeStatusAutomatic": -1,
             "scopeStatusManual": 0 
         }
-
-        """ MT EDIT """
 
         self.context = {
             "education":[],
@@ -126,8 +215,6 @@ class Peap():
             "source":"mturek@mit.edu"
         }]
         """
-
-        """ END MT EDIT """
 
     # Identifiers    
     def addEmail(self,email):

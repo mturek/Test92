@@ -142,11 +142,7 @@ def Process_Inbox_peapFH(response, user, service, root, pl):
         # loops over a list of headers
         Direction = -1
 
-        # bodyParts = []
-        # for part in msg["payload"]["parts"]:
-        #     bodyParts.append(part["body"]["data"])
-
-        print x
+        #print x
         if msg["payload"]["body"]["size"] != 0:
             bodyParts = [msg["payload"]["body"]["data"]]
         elif "parts" in msg["payload"].keys():

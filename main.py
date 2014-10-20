@@ -20,7 +20,7 @@ from oauth2client.file import Storage
 from oauth2client.tools import run
 from Peaps import PeapList
 
-NUM_DAYS = 360
+NUM_DAYS = 30
 
 def getAuthPython(secretFilePath):
     # Combine the relationship matrices of merged E-mail addresses
@@ -137,127 +137,127 @@ def filterResponse(response_all, minNrMessagesInThread):
     return response
 
 
-def calculateScopeScore(pl):
+# def calculateScopeScore(pl):
 
-    '''
-    Arg: pl
+#     '''
+#     Arg: pl
 
-    This section iterates over the list of peaps and tries to calculate and save the score for each one
+#     This section iterates over the list of peaps and tries to calculate and save the score for each one
 
-    '''
+#     '''
 
-    sumOfWeightedNum = 0
+#     sumOfWeightedNum = 0
 
-    #log = open("log", "w")
+#     #log = open("log", "w")
 
-    #for peapID in range(0,len(pl.list)):    
-    for peap in pl.list:    
-        try:
-            time, sender = Score_v2.get_time_sender(peap)
-            parameters = Score_v2.convofit(sender, time)
-
-
-            """ MT EDIT"""
-            theta = parameters[0]
-            A = parameters[1]
-            weightedNum = Score_v2.get_weighted_num_emails(peap)
-            sumOfWeightedNum += weightedNum
+#     #for peapID in range(0,len(pl.list)):    
+#     for peap in pl.list:    
+#         try:
+#             time, sender = Score_v2.get_time_sender(peap)
+#             parameters = Score_v2.convofit(sender, time)
 
 
-            score = weightedNum
-            #score = theta * (1-theta)
-            #score = 0.5*parameters[0]+0.5*parameters[1] # Using alpha and theta
-
-            #log.write(peap.getName() +","+str(len(peap.getMessageIDs()))+","+str(NUM_DAYS)+","+str(theta)+"\n")
-
-            """ END MT EDIT """
-
-            peap.setScopeScore(score)
-
-        except:
-            print "Exception: " + peap.getName()       
-
-    #log.close()
-
-    # Normalize the weightedNum, make sure to change this
-    # when the score takes into account theta
-    for peap in pl.list:
-        if peap.getScopeScore() != -1:
-            peap.setScopeScore(peap.getScopeScore()/sumOfWeightedNum)
+#             """ MT EDIT"""
+#             theta = parameters[0]
+#             A = parameters[1]
+#             weightedNum = Score_v2.get_weighted_num_emails(peap)
+#             sumOfWeightedNum += weightedNum
 
 
-def definePeapsInScope(pl, nrOfPeapsInScope):
-    '''
-    Arg:    pl
-            Number of People in Scope
+#             score = weightedNum
+#             #score = theta * (1-theta)
+#             #score = 0.5*parameters[0]+0.5*parameters[1] # Using alpha and theta
 
-    Return: List of peaps' IDs (scopeScore's descending ordered)
-            List of peaps' scopeScore (descending ordered)
-    '''
+#             #log.write(peap.getName() +","+str(len(peap.getMessageIDs()))+","+str(NUM_DAYS)+","+str(theta)+"\n")
 
-    scopeListPeapsID_inv = []
-    scopeListValues_inv = []
-    for peap in pl.list:
+#             """ END MT EDIT """
 
-        scopeScore = peap.getScopeScore()
+#             peap.setScopeScore(score)
 
-        if len(scopeListValues_inv) == 0:
-            scopeListPeapsID_inv.append(peap.getID())
-            scopeListValues_inv.append(scopeScore)
-        else:
-            ins = bisect.bisect_left(scopeListValues_inv,scopeScore,0,len(scopeListValues_inv))
-            scopeListPeapsID_inv.insert(ins,peap.getID())
-            scopeListValues_inv.insert(ins,scopeScore)
+#         except:
+#             print "Exception: " + peap.getName()       
 
-    scopeListPeapsID = scopeListPeapsID_inv[::-1]
-    scopeListValues = scopeListValues_inv[::-1]
+#     #log.close()
 
-    for x in range(min(nrOfPeapsInScope, len(scopeListPeapsID)-1)):
-        peapID = scopeListPeapsID[x]
-        pl.getPeapByID(peapID).setScopeStatusAutomatic(1)
-
-    return scopeListPeapsID, scopeListValues
+#     # Normalize the weightedNum, make sure to change this
+#     # when the score takes into account theta
+#     for peap in pl.list:
+#         if peap.getScopeScore() != -1:
+#             peap.setScopeScore(peap.getScopeScore()/sumOfWeightedNum)
 
 
-def calculatePriorityScore(pl):
+# def definePeapsInScope(pl, nrOfPeapsInScope):
+#     '''
+#     Arg:    pl
+#             Number of People in Scope
 
-    '''
+#     Return: List of peaps' IDs (scopeScore's descending ordered)
+#             List of peaps' scopeScore (descending ordered)
+#     '''
 
-    Arg:    pl
+#     scopeListPeapsID_inv = []
+#     scopeListValues_inv = []
+#     for peap in pl.list:
 
-    Return: priorityListPeapsID: list of peapsIDs (priorityScore's descending order)
-            priorityListValues: list of priority values (descending order)
-    '''
+#         scopeScore = peap.getScopeScore()
+
+#         if len(scopeListValues_inv) == 0:
+#             scopeListPeapsID_inv.append(peap.getID())
+#             scopeListValues_inv.append(scopeScore)
+#         else:
+#             ins = bisect.bisect_left(scopeListValues_inv,scopeScore,0,len(scopeListValues_inv))
+#             scopeListPeapsID_inv.insert(ins,peap.getID())
+#             scopeListValues_inv.insert(ins,scopeScore)
+
+#     scopeListPeapsID = scopeListPeapsID_inv[::-1]
+#     scopeListValues = scopeListValues_inv[::-1]
+
+#     for x in range(min(nrOfPeapsInScope, len(scopeListPeapsID)-1)):
+#         peapID = scopeListPeapsID[x]
+#         pl.getPeapByID(peapID).setScopeStatusAutomatic(1)
+
+#     return scopeListPeapsID, scopeListValues
 
 
-    priorityListPeapsID_inv = []
-    priorityListValues_inv = []
-    d = datetime.datetime.utcnow()
-    now = calendar.timegm(d.utctimetuple())/(24*60*60.0)
+# def calculatePriorityScore(pl):
 
-    #for peapID in range(0,len(pl.list)):
-    for peap in pl.list:
+#     '''
 
-        time_no_contact = now - peap.getLastContacted()
-        scopeScore = peap.getScopeScore()
+#     Arg:    pl
 
-        # WE NEED A BETTER FUNCTION HERE
-        prio =  scopeScore * np.exp(-time_no_contact/10)
+#     Return: priorityListPeapsID: list of peapsIDs (priorityScore's descending order)
+#             priorityListValues: list of priority values (descending order)
+#     '''
 
-        peap.setPriorityScore(prio) # adds the priorityScore to each peap
 
-        if len(priorityListValues_inv) == 0:
-            priorityListPeapsID_inv.append(peap.getID())
-            priorityListValues_inv.append(prio)
-        else:
-            ins = bisect.bisect_left(priorityListValues_inv,prio,0,len(priorityListValues_inv))
-            priorityListPeapsID_inv.insert(ins,peap.getID())
-            priorityListValues_inv.insert(ins,prio)
+#     priorityListPeapsID_inv = []
+#     priorityListValues_inv = []
+#     d = datetime.datetime.utcnow()
+#     now = calendar.timegm(d.utctimetuple())/(24*60*60.0)
 
-    priorityListPeapsID = priorityListPeapsID_inv[::-1]
-    priorityListValues = priorityListValues_inv[::-1]
+#     #for peapID in range(0,len(pl.list)):
+#     for peap in pl.list:
 
-    return priorityListPeapsID, priorityListValues
+#         time_no_contact = now - peap.getLastContacted()
+#         scopeScore = peap.getScopeScore()
+
+#         # WE NEED A BETTER FUNCTION HERE
+#         prio =  scopeScore * np.exp(-time_no_contact/10)
+
+#         peap.setPriorityScore(prio) # adds the priorityScore to each peap
+
+#         if len(priorityListValues_inv) == 0:
+#             priorityListPeapsID_inv.append(peap.getID())
+#             priorityListValues_inv.append(prio)
+#         else:
+#             ins = bisect.bisect_left(priorityListValues_inv,prio,0,len(priorityListValues_inv))
+#             priorityListPeapsID_inv.insert(ins,peap.getID())
+#             priorityListValues_inv.insert(ins,prio)
+
+#     priorityListPeapsID = priorityListPeapsID_inv[::-1]
+#     priorityListValues = priorityListValues_inv[::-1]
+
+#     return priorityListPeapsID, priorityListValues
 
 
 def findRoot(serviceGmail, serviceUser):  # Edited by FH: uses the user
@@ -315,9 +315,7 @@ if __name__ == "__main__":
     service = getAuthPython('client_secret.json')
 
     # 3. Get Query
-    """ MT EDIT """
     query_all = getQuery(NUM_DAYS, 'all')
-    """ END MT EDIT """
 
 
     # 4. Run the query
@@ -341,20 +339,27 @@ if __name__ == "__main__":
     pl = PeapList(userName)
     Message.Process_Inbox_peapFH(response, user, service[0], root, pl)
 
+    # 6.5 Filter the peaplist to peaps the user might be interested in
+    pl.eliminatePeapsWithoutRelationship()
     
     # 7. Calculate scores (new Zaman's algorithm). Scores are stored in each object
 
     print 'Nr. of peaps: ', len(pl.list)
-    calculateScopeScore(pl)
+    pl.calculateScopeScores()
+    
+    #calculateScopeScore(pl)
 
 
     # 8. Define the list of peaps in scope. The first 150 peaps in the list will be in the scope
 
-    scopeListPeapsID, scopeListValues = definePeapsInScope(pl, 150)
+    #scopeListPeapsID, scopeListValues = definePeapsInScope(pl, 150)
+
+    pl.definePeapsInScope(25)
 
     # 9. Calculate priority as as a function of lastContacted and score for every peap. Potential improvement: we could modify this to calculate priority only for peaps in scope
 
-    priorityListPeapsID, priorityListValues = calculatePriorityScore(pl)
+    #priorityListPeapsID, priorityListValues = calculatePriorityScore(pl)
+    pl.calculatePriorityScores()
 
 
     # 10. Test, print lists
@@ -371,22 +376,41 @@ if __name__ == "__main__":
     now = calendar.timegm(d.utctimetuple())/(24*60*60.0)
 
     print '\n','This is the list of peaps in scope','\n\n'
+
     c = 0
-    for peapID in scopeListPeapsID:
-        c = c + 1
-        scopeScore = pl.getPeapByID(peapID).getScopeScore()
-        scopeStatusAutomatic = pl.getPeapByID(peapID).getScopeStatusAutomatic()
-        print c, '. ', pl.getPeapByID(peapID).getName(), '-->', scopeScore, 'scopeStatusAutomatic: ',scopeStatusAutomatic
+    for peap in pl.list:
+        scopeScore = peap.getScopeScore()
+        scopeStatusAutomatic = peap.getScopeStatusAutomatic()
+
+        print c, '. ', peap.getName(), '-->', scopeScore, 'scopeStatusAutomatic:', scopeStatusAutomatic 
+
+
+    # c = 0
+    # for peapID in scopeListPeapsID:
+    #     c = c + 1
+    #     scopeScore = pl.getPeapByID(peapID).getScopeScore()
+    #     scopeStatusAutomatic = pl.getPeapByID(peapID).getScopeStatusAutomatic()
+    #     print c, '. ', pl.getPeapByID(peapID).getName(), '-->', scopeScore, 'scopeStatusAutomatic: ',scopeStatusAutomatic
 
     print '\n','This is the list prioritized peaps','\n\n'
-    for x in range(0, min(len(priorityListPeapsID),150)):
-        peapID = scopeListPeapsID[x]
-        peap = pl.getPeapByID(peapID)
+    
 
+    peapsByPriority = sorted(pl.list, key = lambda x: x.scopeInfo["priorityScore"], reverse = True)
+    for x in range(0, min(150, len(pl.list))):
         priorityScore = peap.getPriorityScore()
-        time_no_contact = now - peap.getLastContacted()
         scopeScore = peap.getScopeScore()
-        print x, '. ', peap.getName(), ' priority score: ', priorityScore, 'scope score: ', scopeScore, 'lastContacted', time_no_contact
+
+        print x, '. ', peapsByPriority[x].getName(), '-->', priorityScore, 'scopeScore:', scopeScore
+
+
+    # for x in range(0, min(len(priorityListPeapsID),150)):
+    #     peapID = scopeListPeapsID[x]
+    #     peap = pl.getPeapByID(peapID)
+
+    #     priorityScore = peap.getPriorityScore()
+    #     time_no_contact = now - peap.getLastContacted()
+    #     scopeScore = peap.getScopeScore()
+    #     print x, '. ', peap.getName(), ' priority score: ', priorityScore, 'scope score: ', scopeScore, 'lastContacted', time_no_contact
 
         # Save Peaps
         peap.savePeap() #  WHAT DO WE USE THIS LINE FOR? PARSE?
