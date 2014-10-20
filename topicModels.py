@@ -5,9 +5,30 @@ import re
 
 from gensim import corpora, models, similarities
 
+from HTMLParser import HTMLParser
+
+class MLStripper(HTMLParser):
+    def __init__(self):
+        self.reset()
+        self.fed = []
+    def handle_data(self, d):
+        self.fed.append(d)
+    def handle_entityref(self, name):
+        self.fed.append('&%s;' % name)
+    def get_data(self):
+        return ''.join(self.fed)
+
+def html_to_text(html):
+    s = MLStripper()
+    s.feed(html)
+    return s.get_data()
+
+
+
+namesInPeaps = []
 
 with open("topicModelData/stop_list.txt") as file:
-	common_words = ["re","fw","fwd","eom"]
+	common_words = ["re","fw","fwd","eom"] + ["am", "pm"]
 
 	for row in file:
 		common_words.append(re.sub(r'[^\w\s]','',row.rstrip().lower()))
@@ -17,8 +38,10 @@ def analyze_subjects(subject_lines):
 	# Raw subject lines
 	#print "\n".join(subject_lines)
 
-	# Remove punctuation
+	# Remove punctuation and new lines
 	subject_lines_no_punct = [re.sub(r'[^\w\s]','',s) for s in subject_lines]
+	subject_lines_no_punct = [re.sub(r'\n','',s) for s in subject_lines]
+
 	# print "\n".join(subject_lines_no_punct)
 
 	# Tokenized on spaces
@@ -32,7 +55,7 @@ def analyze_subjects(subject_lines):
 		new_line = []
 
 		for word in line:
-			if not word in common_words:
+			if not word in common_words and not word in namesInPeaps:
 				new_line.append(word)
 
 		texts.append(new_line)
@@ -52,8 +75,17 @@ def analyze_subjects(subject_lines):
 	tokens_once = set(word for word in set(all_tokens) if all_tokens.count(word) == 1)
 	texts = [[word for word in text if word not in tokens_once] for text in texts]
 
+	# Make sure no empty strings/arrays are left over
 	for line in texts:
-		print str(line)
+		while "" in line:
+			line.remove("")
+
+	while [] in texts:
+		texts.remove([])
+
+
+	# for line in texts:
+	# 	print str(line)
 
 	# Try the topic model
 	dictionary = corpora.Dictionary(texts)
@@ -69,11 +101,11 @@ def analyze_subjects(subject_lines):
 	#print(mm)
 
 	#lda = models.ldamodel.LdaModel(corpus=mm, id2word=id2word, num_topics=5, update_every=0, passes=20)
-	lda = models.ldamodel.LdaModel(corpus=mm, id2word=id2word, num_topics=3)
+	lda = models.ldamodel.LdaModel(corpus=mm, id2word=id2word, num_topics=5)
 	#print lda
 
-	topics = lda.print_topics(num_words=2)
-	#print "\n".join(topics)
+	topics = lda.print_topics(num_words=5)
+	print "\n".join(topics)
 	#lda.print_topics()
 
 	# corpus = subject_lines_no_punct_token
@@ -96,10 +128,20 @@ if __name__ == "__main__":
 	pl = pickle.load(f)
 	f.close()
 
+	#namesInPeaps = []
+	for peap in pl.list:
+		for name in peap.names:
+			processed = re.sub(r'[^\w\s]','', name)
+			parts = processed.lower().split(" ")	
+
+			namesInPeaps.extend(parts)
+
+	# print "\n".join(namesInPeaps)
+
 	sortedPeaps = sorted(pl.list, key=lambda x:len(x.messageID), reverse=True)
 
 
-	for peap in sortedPeaps[:10]:
+	for peap in sortedPeaps[:10] + [pl.getPeapByName("Armen Nalband")]:
 		if peap.name == "Null":
 			continue
 
@@ -108,8 +150,13 @@ if __name__ == "__main__":
 		print "Peap emails: " + str(peap.emails)
 		print "Number of emails: " + str(len(peap.messageID))
 		
-		subject_lines = [peap.table[ID][7].lower() for ID in peap.messageID]
+		# Use to analyze subject lines
+		#subject_lines = [peap.table[ID]["messageSubject"].lower() for ID in peap.messageID]
 		
+		# Use to analyze bodies
+		subject_lines = [html_to_text(peap.getMessageByID(ID)["messageBody"]).lower() for ID in peap.getMessageIDs()]
+
+
 		# print "\n".join(subject_lines)
 
 		analyze_subjects(subject_lines)
