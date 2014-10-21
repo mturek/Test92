@@ -7,6 +7,7 @@ import re
 import time
 import Merge
 import base64
+import socket
 
 from apiclient import errors
 from email.utils import parsedate
@@ -61,7 +62,7 @@ def GetMessage(service, user_id, msg_id):
     message = service.users().messages().get(userId=user_id, id=msg_id).execute()
     # print 'Message snippet: %s' % message['snippet']
     return message
-  except errors.HttpError, error:
+  except (socket.error,errors.HttpError) as error:
     print 'An error occurred: %s' % error
     
     message = {
