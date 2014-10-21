@@ -210,7 +210,11 @@ def get_weighted_num_emails(peap):
             targetEmailField = peapField
 
         # Increment the number of emails by the weighting coefficient
-        weighted_num_emails += coefficients[directionName][targetEmailField][countCategory]
+        if targetEmailField == 'None':
+            print "targetEmailField is None for message ", id
+            print message
+        else: 
+            weighted_num_emails += coefficients[directionName][targetEmailField][countCategory]
 
         #print str(pl.list[peapID].name) + " : " + str(coefficients[directionName][targetEmailField][countCategory]) + " for: " + messageSubject
 
