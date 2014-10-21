@@ -22,6 +22,50 @@ from Peaps import PeapList
 
 NUM_DAYS = 360
 
+def getAuthPythonFromString(jsonString):
+    
+    jsonAuth = json.loads(jsonString)
+    
+    pid = os.getpid()
+    print os.getpid()
+    
+    
+    f = open('/root/nodejsPeaps/storage/'+str(pid)+'.storage','w')
+    
+    storage = jsonAuth
+    
+    f.write(json.dumps(storage))
+    # f.write ("{\"_module\": \"oauth2client.client\", \"token_expiry\": \"2014-09-16T04:53:04Z\", \"access_token\": \"ya29.ggD31F2RmvKTd7QC2koPaK6BZhPhw2IqLstpWkz8rJ7wDtX7kYZ25Vfr\", \"token_uri\": \"https://accounts.google.com/o/oauth2/token\", \"invalid\": false, \"token_response\": ")
+    #
+    # f.write(jsonString)
+    #
+    # f.write(", \"client_id\": \"944061120239-tpmp65vqp9h4d6pe52v33fljgmol4o5v.apps.googleusercontent.com\", \"id_token\": {\"aud\": \"944061120239-tpmp65vqp9h4d6pe52v33fljgmol4o5v.apps.googleusercontent.com\", \"cid\": \"944061120239-tpmp65vqp9h4d6pe52v33fljgmol4o5v.apps.googleusercontent.com\", \"iss\": \"accounts.google.com\", \"at_hash\": \"axASjthEjF6RkMc7x0c3sA\", \"exp\": 1409335817, \"azp\": \"944061120239-tpmp65vqp9h4d6pe52v33fljgmol4o5v.apps.googleusercontent.com\", \"iat\": 1409331917, \"token_hash\": \"axASjthEjF6RkMc7x0c3sA\", \"id\": \"103318250095136450821\", \"sub\": \"103318250095136450821\"}, \"client_secret\": \"4PVtNCo_NCNC1agXEB7SSA5p\", \"revoke_uri\": \"https://accounts.google.com/o/oauth2/revoke\", \"_class\": \"OAuth2Credentials\", \"refresh_token\": \"1/ziwThDFsj0GVxSB2fneFka5gjIV3tav9elmEsqJRQ_4\", \"user_agent\": null}")
+
+    f.close()
+    
+
+    # Check https://developers.google.com/gmail/api/auth/scopes for all available scopes
+    OAUTH_SCOPE = 'https://www.googleapis.com/auth/gmail.readonly profile email'
+
+    # Location of the credentials storage file
+    STORAGE = Storage('/root/nodejsPeaps/storage/'+str(pid)+'.storage')
+
+    # Try to retrieve credentials from storage or run the flow to generate them
+    credentials = STORAGE.get()
+    if credentials is None or credentials.invalid:
+        print "invalid credentials"
+    print "Done getting credentials"
+
+    # Authorize the httplib2.Http object with our credentials
+    http = httplib2.Http()
+    http = credentials.authorize(http)
+
+    # Build the Gmail service from discovery
+    service_gmail = build('gmail', 'v1', http=http)
+    service_user  = build('plus', 'v1', http=http)
+
+    return [service_gmail,service_user]
+
 def getAuthPython(secretFilePath):
     # Combine the relationship matrices of merged E-mail addresses
 
@@ -107,6 +151,18 @@ def getUserName(service):
     user = service.people().get(userId='me').execute()
     return user['displayName']
 
+# Get the user name to identify in the parse database 
+
+def getUserEmail(service):
+    user = service.people().get(userId='me').execute()
+    print user
+    print user['emails'][0]['value']
+    return user['emails'][0]['value']
+
+
+####
+
+
 
 def filterResponse(response_all, minNrMessagesInThread):
 
@@ -135,129 +191,6 @@ def filterResponse(response_all, minNrMessagesInThread):
     print '# of messages downloaded: ', len(response_all)
     print '# of messages that we will actually process: ',len(response)
     return response
-
-
-# def calculateScopeScore(pl):
-
-#     '''
-#     Arg: pl
-
-#     This section iterates over the list of peaps and tries to calculate and save the score for each one
-
-#     '''
-
-#     sumOfWeightedNum = 0
-
-#     #log = open("log", "w")
-
-#     #for peapID in range(0,len(pl.list)):    
-#     for peap in pl.list:    
-#         try:
-#             time, sender = Score_v2.get_time_sender(peap)
-#             parameters = Score_v2.convofit(sender, time)
-
-
-#             """ MT EDIT"""
-#             theta = parameters[0]
-#             A = parameters[1]
-#             weightedNum = Score_v2.get_weighted_num_emails(peap)
-#             sumOfWeightedNum += weightedNum
-
-
-#             score = weightedNum
-#             #score = theta * (1-theta)
-#             #score = 0.5*parameters[0]+0.5*parameters[1] # Using alpha and theta
-
-#             #log.write(peap.getName() +","+str(len(peap.getMessageIDs()))+","+str(NUM_DAYS)+","+str(theta)+"\n")
-
-#             """ END MT EDIT """
-
-#             peap.setScopeScore(score)
-
-#         except:
-#             print "Exception: " + peap.getName()       
-
-#     #log.close()
-
-#     # Normalize the weightedNum, make sure to change this
-#     # when the score takes into account theta
-#     for peap in pl.list:
-#         if peap.getScopeScore() != -1:
-#             peap.setScopeScore(peap.getScopeScore()/sumOfWeightedNum)
-
-
-# def definePeapsInScope(pl, nrOfPeapsInScope):
-#     '''
-#     Arg:    pl
-#             Number of People in Scope
-
-#     Return: List of peaps' IDs (scopeScore's descending ordered)
-#             List of peaps' scopeScore (descending ordered)
-#     '''
-
-#     scopeListPeapsID_inv = []
-#     scopeListValues_inv = []
-#     for peap in pl.list:
-
-#         scopeScore = peap.getScopeScore()
-
-#         if len(scopeListValues_inv) == 0:
-#             scopeListPeapsID_inv.append(peap.getID())
-#             scopeListValues_inv.append(scopeScore)
-#         else:
-#             ins = bisect.bisect_left(scopeListValues_inv,scopeScore,0,len(scopeListValues_inv))
-#             scopeListPeapsID_inv.insert(ins,peap.getID())
-#             scopeListValues_inv.insert(ins,scopeScore)
-
-#     scopeListPeapsID = scopeListPeapsID_inv[::-1]
-#     scopeListValues = scopeListValues_inv[::-1]
-
-#     for x in range(min(nrOfPeapsInScope, len(scopeListPeapsID)-1)):
-#         peapID = scopeListPeapsID[x]
-#         pl.getPeapByID(peapID).setScopeStatusAutomatic(1)
-
-#     return scopeListPeapsID, scopeListValues
-
-
-# def calculatePriorityScore(pl):
-
-#     '''
-
-#     Arg:    pl
-
-#     Return: priorityListPeapsID: list of peapsIDs (priorityScore's descending order)
-#             priorityListValues: list of priority values (descending order)
-#     '''
-
-
-#     priorityListPeapsID_inv = []
-#     priorityListValues_inv = []
-#     d = datetime.datetime.utcnow()
-#     now = calendar.timegm(d.utctimetuple())/(24*60*60.0)
-
-#     #for peapID in range(0,len(pl.list)):
-#     for peap in pl.list:
-
-#         time_no_contact = now - peap.getLastContacted()
-#         scopeScore = peap.getScopeScore()
-
-#         # WE NEED A BETTER FUNCTION HERE
-#         prio =  scopeScore * np.exp(-time_no_contact/10)
-
-#         peap.setPriorityScore(prio) # adds the priorityScore to each peap
-
-#         if len(priorityListValues_inv) == 0:
-#             priorityListPeapsID_inv.append(peap.getID())
-#             priorityListValues_inv.append(prio)
-#         else:
-#             ins = bisect.bisect_left(priorityListValues_inv,prio,0,len(priorityListValues_inv))
-#             priorityListPeapsID_inv.insert(ins,peap.getID())
-#             priorityListValues_inv.insert(ins,prio)
-
-#     priorityListPeapsID = priorityListPeapsID_inv[::-1]
-#     priorityListValues = priorityListValues_inv[::-1]
-
-#     return priorityListPeapsID, priorityListValues
 
 
 def findRoot(serviceGmail, serviceUser):  # Edited by FH: uses the user
@@ -312,7 +245,12 @@ if __name__ == "__main__":
     # 2. Get Authorization
 
     t0 = calendar.timegm(d.utctimetuple())
+    
+    # Local
     service = getAuthPython('client_secret.json')
+
+    # Server
+    #service = getAuthPythonFromString(sys.argv[1])
 
     # 3. Get Query
     query_all = getQuery(NUM_DAYS, 'all')
@@ -321,7 +259,7 @@ if __name__ == "__main__":
     # 4. Run the query
 
     user = "me" # Use the user who authorized the call
-    userName = getUserName(service[1])
+    userName = getUserEmail(service[1])
 
     userTest = service[1].people().get(userId='me').execute()
 
@@ -345,6 +283,13 @@ if __name__ == "__main__":
     
     # 7. Calculate scores (new Zaman's algorithm). Scores are stored in each object
 
+
+    # Save another pickle for debugging purposes
+    f2 = open("mtPeapList_noscore.dat","w")
+    pickle.dump(pl, f2)
+    f2.close()
+
+
     print 'Nr. of peaps: ', len(pl.list)
     pl.calculateScopeScores()
     
@@ -355,12 +300,17 @@ if __name__ == "__main__":
 
     #scopeListPeapsID, scopeListValues = definePeapsInScope(pl, 150)
 
-    pl.sortPeapsByScopeScore(25)
+    pl.sortPeapsByScopeScore(150)
+
 
     # 9. Calculate priority as as a function of lastContacted and score for every peap. Potential improvement: we could modify this to calculate priority only for peaps in scope
 
     #priorityListPeapsID, priorityListValues = calculatePriorityScore(pl)
     pl.calculatePriorityScores()
+
+    # 9.5 - Save the peaps in scope to the parse server
+    pl.uploadPeapsToParse()
+
 
 
     # 10. Test, print lists
@@ -399,10 +349,12 @@ if __name__ == "__main__":
 
     peapsByPriority = sorted(pl.list, key = lambda x: x.scopeInfo["priorityScore"], reverse = True)
     for x in range(0, min(150, len(pl.list))):
+        peap = peapsByPriority[x]
+
         priorityScore = peap.getPriorityScore()
         scopeScore = peap.getScopeScore()
 
-        print x, '. ', peapsByPriority[x].getName(), '-->', priorityScore, 'scopeScore:', scopeScore
+        print x, '. ', peap.getName(), '-->', priorityScore, 'scopeScore:', scopeScore
 
 
     # for x in range(0, min(len(priorityListPeapsID),150)):
@@ -413,9 +365,6 @@ if __name__ == "__main__":
     #     time_no_contact = now - peap.getLastContacted()
     #     scopeScore = peap.getScopeScore()
     #     print x, '. ', peap.getName(), ' priority score: ', priorityScore, 'scope score: ', scopeScore, 'lastContacted', time_no_contact
-
-        # Save Peaps
-        peap.savePeap() #  WHAT DO WE USE THIS LINE FOR? PARSE?
 
     tf = calendar.timegm(d.utctimetuple())
     print 'the whole process took: ', tf - t0, ' seconds'

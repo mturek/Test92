@@ -11,7 +11,7 @@ import calendar
 import numpy as np
 
 
-class parsePeap(Object):
+class parsePeap2(Object):
     pass
 
 class PeapList():
@@ -152,6 +152,15 @@ class PeapList():
 
             peap.setPriorityScore(prio)
 
+    def uploadPeapsToParse(self):
+        # Assume self.list is ordered by scopeScore (ran sortPeapsByScore recently)
+        for index in range(min(300, len(self.list))):
+            peap = self.list[index]
+            scopeStatusManual = peap.getScopeStatusManual()
+            scopeStatusAutomatic = peap.getScopeStatusAutomatic()
+
+            if scopeStatusManual == 1 or (scopeStatusManual == 0 and scopeStatusAutomatic == 1):
+                peap.savePeap()
 
 
 class Peap():
@@ -171,14 +180,6 @@ class Peap():
 
         self.messageID = [] # chronologically sorted list of message IDs
         self.table = {}     # Table containing the gathered data
-
-        """DEPRECATED"
-        self.lastContacted = -1
-        self.scopeScore = -1  #
-        self.priorityScore = -1
-        self.scopeStatusAutomatic = -1  # 1: in scope, -1: out of scope. By default they are all -1
-        self.scopeStatusManual = 0  # 0: not chosen, 1: in scope, -1: not in scope
-        "END DEPRECATED"""
 
         self.scopeInfo = {
             "normalizedNumEmails":0,
@@ -261,7 +262,7 @@ class Peap():
     def setScopeScore(self,sco):  # edited by FH
         self.scopeInfo["scopeScore"] = sco
 
-    def addScopeStatusManual(self,status):  # edited by FH
+    def setScopeStatusManual(self,status):  # edited by FH
         self.scopeInfo["scopeStatusManual"] = status
 
     def setScopeStatusAutomatic(self,status):  # edited by FH
@@ -281,6 +282,9 @@ class Peap():
 
     def getScopeStatusAutomatic(self):
         return self.scopeInfo["scopeStatusAutomatic"]
+
+    def getScopeStatusManual(self):
+        return self.scopeInfo["scopeStatusManual"]
 
     def getMessageIDs(self):
         return self.messageID
@@ -311,7 +315,6 @@ class Peap():
 
         self.table[ID] = message
 
-        """ END EDIT """
         # 2. Now add the message ID at the right chronological position in the messageID list
 
         i = 0
@@ -335,9 +338,14 @@ class Peap():
     # Save the relevant information in Parse
 
     def savePeap(self):
-        pPeap = parsePeap(uemail = self.userName, name = self.name , names=self.names, ID = self.ID , emails = self.emails , 
-            scopeInfo = self.scopeInfo, context = self.context)
+        pPeap = parsePeap2(uemail = self.userName, name = self.name , names=self.names, ID = self.ID , emails = self.emails , 
+            scopeScore = self.scopeInfo["scopeScore"], priorityScore = self.scopeInfo["priorityScore"], 
+            scopeStatusAutomatic = self.scopeInfo["scopeStatusAutomatic"], scopeStatusManual = self.scopeInfo["scopeStatusManual"],
+            normalizedNumEmails = self.scopeInfo["normalizedNumEmails"], receivedEmailRatio = self.scopeInfo["receivedEmailRatio"],
+            lastContacted = self.scopeInfo["lastContacted"], context = self.context)
         
         """ DON'T SAVE ON PARSE FOR THE TIME BEING """
-        # pPeap.save()
+        pPeap.save()
         """ REMOVE WHEN DONE DEBUGGING """
+
+        print "Object ID", pPeap.objectId
