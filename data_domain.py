@@ -93,11 +93,13 @@ def load_domain_data(pl):
 						location_entry = {}
 
 						# Check which fields are filled in on WHOIS
-						if "city" in registrant.keys():
-							location_entry["city"] = registrant["city"]
 
-						if "state" in registrant.keys():
-							location_entry["state"] = registrant["state"]
+						# Do not use city/state since companies might have multiple branches
+						# if "city" in registrant.keys():
+						# 	location_entry["city"] = registrant["city"]
+
+						# if "state" in registrant.keys():
+						# 	location_entry["state"] = registrant["state"]
 
 						if "country" in registrant.keys():
 							location_entry["country"] = registrant["country"]
