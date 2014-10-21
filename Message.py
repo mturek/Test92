@@ -63,6 +63,14 @@ def GetMessage(service, user_id, msg_id):
     return message
   except errors.HttpError, error:
     print 'An error occurred: %s' % error
+    
+    message = {
+        'payload': {
+            'headers': []
+        }
+    } 
+
+    return message
 
 
 def extractEmailsAndName(string):
