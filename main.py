@@ -20,7 +20,7 @@ from oauth2client.file import Storage
 from oauth2client.tools import run
 from Peaps import PeapList
 
-NUM_DAYS = 360
+NUM_DAYS = 100
 
 def getAuthPythonFromString(jsonString):
     
@@ -306,7 +306,7 @@ if __name__ == "__main__":
     # 9. Calculate priority as as a function of lastContacted and score for every peap. Potential improvement: we could modify this to calculate priority only for peaps in scope
 
     #priorityListPeapsID, priorityListValues = calculatePriorityScore(pl)
-    pl.calculatePriorityScores()
+    pl.calculatePriorityScores(150)  # Edited by FH
 
     # 9.5 - Save the peaps in scope to the parse server
     pl.uploadPeapsToParse()
@@ -368,5 +368,3 @@ if __name__ == "__main__":
 
     tf = calendar.timegm(d.utctimetuple())
     print 'the whole process took: ', tf - t0, ' seconds'
-
-	

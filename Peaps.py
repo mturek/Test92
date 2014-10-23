@@ -23,6 +23,13 @@ class PeapList():
     def __init__(self,name):
         self.name = name
         self.list = []
+        # FH: It would be useful to have several variables here:
+        # Lists:
+        #   - listInScope: all peaps (list of peaps in scope, ordered by priority)
+        #   - listPriority (list of peaps in scope, ordered by priority)
+        # Other global variables?
+        #   - numberOfPeapsInScope: this number should include the 150 + manualEntries
+        #   - dateLastQuery, etc
 
     # Creates a new Peap object and adds it to the PeapList
     def addPeap(self,name,email):
@@ -139,18 +146,32 @@ class PeapList():
         for i in range(min(numInScope, len(self.list))):
             self.list[i].scopeInfo["scopeStatusAutomatic"] = 1
 
-    def calculatePriorityScores(self):
-        d = datetime.datetime.utcnow()
-        now = calendar.timegm(d.utctimetuple())/(24*60*60.0)
+    def calculatePriorityScores(self, numInScope):
 
-        for peap in self.list:
-            time_no_contact = now - peap.getLastContacted()
-            scopeScore = peap.getScopeScore()
+        listScope = []
 
-            # WE NEED A BETTER FUNCTION HERE
-            prio =  scopeScore * np.exp(-time_no_contact/10)
+        self.list.sort(key=lambda x: x.scopeInfo["scopeScore"], reverse=True)  # organizes peaps by scopeScore
+        for i in range(len(self.list)):
+            if (self.list[i].scopeInfo["scopeStatusManual"] == 1) | (self.list[i].scopeInfo["scopeStatusAutomatic"] == 1):
+                listScope.append(self.list[i])
 
-            peap.setPriorityScore(prio)
+        n = len(listScope)
+
+        listScope.sort(key=lambda x: x.scopeInfo["lastContacted"], reverse=False) # organizes peaps by lastContacted
+        for i in range(len(listScope)):
+            listScope[i].scopeInfo["lastContactedPercentage"] = (n*1.0-i)/n*100.0
+            print listScope[i].name, " ", listScope[i].scopeInfo["lastContactedPercentage"]
+
+
+        listScope.sort(key=lambda x: x.scopeInfo["scopeScore"], reverse=True)  # organizes peaps by scopeScore
+        for i in range(len(listScope)):
+            listScope[i].scopeInfo["scopePercentage"] = (n*1.0-i)/n*100.0
+            print listScope[i].name, " ", listScope[i].scopeInfo["scopePercentage"]
+
+        for i in range(len(listScope)):
+            listScope[i].scopeInfo["priorityScore"] = 0.4 * listScope[i].scopeInfo["scopePercentage"] + 0.6 * listScope[i].scopeInfo["lastContactedPercentage"]
+            print listScope[i].name, " ", listScope[i].scopeInfo["priorityScore"]
+
 
     def uploadPeapsToParse(self):
         # Assume self.list is ordered by scopeScore (ran sortPeapsByScore recently)
@@ -188,7 +209,9 @@ class Peap():
             "scopeScore": -1,
             "priorityScore": -1,
             "scopeStatusAutomatic": -1,
-            "scopeStatusManual": 0 
+            "scopeStatusManual": 0,
+            "scopePercentage": 0,  # created by FH
+            "lastContactedPercentage": 0 # created by FH
         }
 
         self.context = {
