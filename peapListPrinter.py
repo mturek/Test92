@@ -1,6 +1,7 @@
 import pickle
 
 from HTMLParser import HTMLParser
+import datetime,calendar
 
 class MLStripper(HTMLParser):
     def __init__(self):
@@ -25,20 +26,41 @@ pl = pickle.load(f)
 f.close()
 
 
-outputFile = open("peapListText.tsv", "w")
-outputFile.write("\t".join(["Primary name", "All names", "Emails", "ScopeScore","Last Contacted","NumberOfEmailsIncluded","ContextLocations","ContextOrganizations","ContextEducation"]) + "\n")
+# Print names, emails, and context
+#
+# outputFile = open("peapListText.tsv", "w")
+# outputFile.write("\t".join(["Primary name", "All names", "Emails", "ScopeScore","Last Contacted","NumberOfEmailsIncluded","ContextLocations","ContextOrganizations","ContextEducation"]) + "\n")
+# for peap in pl.list:
+# 	row = [peap.name, peap.names, peap.emails, peap.getScopeScore(), peap.getLastContacted(), len(peap.getMessageIDs()), peap.context["locations"], peap.context["organizations"], peap.context["education"]]
+
+# 	outputFile.write("\t".join(map(str, row)) + "\n")
+
+# 	print peap.name, "written"
+
+# outputFile.close()
+
+# Print score parameters
+#
+outputFile = open("peapListScores.tsv", "w")
+outputFile.write("\t".join(["Primary name","normalizedNumEmails","receivedEmailRatio","lastContacted","daysSinceLastContact","scopeScore","scopeStatusAutomatic"]) + "\n")
+
+d = datetime.datetime.utcnow()
+now = 1.0*calendar.timegm(d.utctimetuple())/(24*60*60.0)
+
 for peap in pl.list:
-	row = [peap.name, peap.names, peap.emails, peap.getScopeScore(), peap.getLastContacted(), len(peap.getMessageIDs()), peap.context["locations"], peap.context["organizations"], peap.context["education"]]
+    daysSinceLastContact = now - peap.getLastContacted()
+    row = [peap.name, peap.scopeInfo["normalizedNumEmails"],peap.scopeInfo["receivedEmailRatio"],peap.getLastContacted(),daysSinceLastContact,peap.getScopeScore(),peap.getScopeStatusAutomatic()]
 
-	outputFile.write("\t".join(map(str, row)) + "\n")
+    outputFile.write("\t".join(map(str, row)) + "\n")
 
-	print peap.name, "written"
+    print peap.name, "written"
 
 outputFile.close()
 
 
 
-
+# Print message bodies
+#
 # outputFile = open("messageBodies.txt", "w")
 # for peap in pl.list:
 # 	if "Armen Nalband" in peap.names:
