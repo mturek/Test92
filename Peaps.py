@@ -14,6 +14,9 @@ import numpy as np
 class parsePeap2(Object):
     pass
 
+class UserEntry(Object):
+    pass
+
 class PeapList():
 
     # The constructor function
@@ -174,14 +177,34 @@ class PeapList():
 
 
     def uploadPeapsToParse(self):
-        # Assume self.list is ordered by scopeScore (ran sortPeapsByScore recently)
-        for index in range(min(300, len(self.list))):
-            peap = self.list[index]
-            scopeStatusManual = peap.getScopeStatusManual()
-            scopeStatusAutomatic = peap.getScopeStatusAutomatic()
+        # Check if user already had his mailbox processed:
+        userEntries = UserEntry.Query.filter(uemail = self.name)
+        print userEntries
 
-            if scopeStatusManual == 1 or (scopeStatusManual == 0 and scopeStatusAutomatic == 1):
-                peap.savePeap()
+        if len(userEntries) != 1:
+            print "Database error, number of user entries associated with email:", len(userEntries)
+            return
+
+        else:
+            print "Saving peaps for user on Parse"
+            userEntry = userEntries[0]
+
+            # Assume self.list is ordered by scopeScore (ran sortPeapsByScore recently)
+            for index in range(min(300, len(self.list))):
+                peap = self.list[index]
+                scopeStatusManual = peap.getScopeStatusManual()
+                scopeStatusAutomatic = peap.getScopeStatusAutomatic()
+
+                if scopeStatusManual == 1 or (scopeStatusManual == 0 and scopeStatusAutomatic == 1):
+                    peap.savePeap()
+
+            userEntry.mailboxProcessed = True
+
+            d = datetime.datetime.utcnow()
+            now = calendar.timegm(d.utctimetuple())
+            userEntry.lastMailboxUpdate = now
+
+            userEntry.save()
 
 
 class Peap():

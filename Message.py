@@ -64,6 +64,7 @@ def GetMessage(service, user_id, msg_id):
     return message
   except (socket.error,errors.HttpError) as error:
     print 'An error occurred: %s' % error
+    print 'Message ID:', msg_id
     
     message = {
         'payload': {

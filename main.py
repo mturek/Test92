@@ -18,7 +18,9 @@ from apiclient.discovery import build
 from oauth2client.client import flow_from_clientsecrets
 from oauth2client.file import Storage
 from oauth2client.tools import run
-from Peaps import PeapList
+from Peaps import PeapList,UserEntry
+
+import sys
 
 NUM_DAYS = 100
 
@@ -260,6 +262,45 @@ if __name__ == "__main__":
 
     user = "me" # Use the user who authorized the call
     userName = getUserEmail(service[1])
+
+
+    # 4.5 Check whether we have the user in the database
+
+    # Check if user already had his mailbox processed:
+    userEntries = UserEntry.Query.filter(uemail = userName)
+
+    print "userName:", userName
+    for entry in UserEntry.Query.all():
+        print entry.uemail
+
+    print "All:"
+    print UserEntry.Query.all()
+
+    if len(userEntries) == 0:
+        print "User logging in for the first time, creating a database entry on Parse"
+        
+        userEntry = UserEntry(uemail = userName, userCreated=t0, lastLogin=t0, 
+            mailboxProcessed=False, lastMailboxUpdate=t0, numAppOpened=1)
+
+        userEntry.save()
+    
+    elif len(userEntries) == 1:
+        print "User found - updating access statistics"
+
+        userEntry = userEntries[0]
+        userEntry.increment("numAppOpened")
+        userEntry.lastLogin = t0
+
+        userEntry.save()
+
+        if userEntry.mailboxProcessed == True:
+            print "User's mailbox already processed, quitting..."
+            sys.exit(0)
+
+    else:
+        print "Duplicate entries for user, check database consistency"
+        print "Quitting..."
+        sys.exit(0)
 
     userTest = service[1].people().get(userId='me').execute()
 
