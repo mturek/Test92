@@ -20,9 +20,14 @@ from oauth2client.file import Storage
 from oauth2client.tools import run
 from Peaps import PeapList,UserEntry
 
+import json
+import os
+
 import sys
 
-NUM_DAYS = 100
+NUM_DAYS = 10
+
+SERVER = True
 
 def getAuthPythonFromString(jsonString):
     
@@ -134,7 +139,11 @@ def getQuery(days, type):
 
     query = 'after:' + t_after.strftime("%Y/%m/%d") + ' before:' + today.strftime("%Y/%m/%d") + ' -in:chats'
 
-    black_list = [line.strip() for line in open('black_list.txt')]     # don't retrieve emails from the black_list.txt
+    if SERVER == False:
+        black_list = [line.strip() for line in open('black_list.txt')]     # don't retrieve emails from the black_list.txt
+    elif SERVER == True:
+        black_list = [line.strip() for line in open('/root/nodejsPeaps/black_list.txt')]
+
 
     for lines in black_list:
         query = query + " -" + lines
@@ -237,6 +246,11 @@ def findRoot(serviceGmail, serviceUser):  # Edited by FH: uses the user
 
 if __name__ == "__main__":
 
+    f = open('/root/nodejsPeaps/'+"test"+'_log.txt','w')
+    f.write("Started running main.py")
+    f.close()
+    
+
     # 0. Register the application to Parse
 
     registerToParse()
@@ -249,7 +263,10 @@ if __name__ == "__main__":
     t0 = calendar.timegm(d.utctimetuple())
     
     # Local
-    service = getAuthPython('client_secret.json')
+    if SERVER == False:
+        service = getAuthPython('client_secret.json')
+    elif SERVER == True:
+        service = getAuthPythonFromString(sys.argv[1])
 
     # Server
     #service = getAuthPythonFromString(sys.argv[1])
@@ -268,13 +285,6 @@ if __name__ == "__main__":
 
     # Check if user already had his mailbox processed:
     userEntries = UserEntry.Query.filter(uemail = userName)
-
-    print "userName:", userName
-    for entry in UserEntry.Query.all():
-        print entry.uemail
-
-    print "All:"
-    print UserEntry.Query.all()
 
     if len(userEntries) == 0:
         print "User logging in for the first time, creating a database entry on Parse"
@@ -329,9 +339,10 @@ if __name__ == "__main__":
 
 
     # Save another pickle for debugging purposes
-    f2 = open("mtPeapList_noscore.dat","w")
-    pickle.dump(pl, f2)
-    f2.close()
+    if SERVER == False:
+        f2 = open("mtPeapList_noscore.dat","w")
+        pickle.dump(pl, f2)
+        f2.close()
 
 
     print 'Nr. of peaps: ', len(pl.list)
@@ -359,56 +370,38 @@ if __name__ == "__main__":
 
     # 10. Test, print lists
 
-    """ MT DEBUG """
-    
-    f = open("mtPeapList.dat", "w")
-    pickle.dump(pl, f)
-    f.close()    
-
-    """ END MT DEBUG """
-
-    d = datetime.datetime.utcnow()
-    now = calendar.timegm(d.utctimetuple())/(24*60*60.0)
-
-    print '\n','This is the list of peaps in scope','\n\n'
-
-    c = 0
-    for peap in pl.list:
-        c+=1
-        scopeScore = peap.getScopeScore()
-        scopeStatusAutomatic = peap.getScopeStatusAutomatic()
-
-        print c, '. ', peap.getName(), '-->', scopeScore, 'scopeStatusAutomatic:', scopeStatusAutomatic 
+    if SERVER == False:
+        f = open("mtPeapList.dat", "w")
+        pickle.dump(pl, f)
+        f.close()    
 
 
-    # c = 0
-    # for peapID in scopeListPeapsID:
-    #     c = c + 1
-    #     scopeScore = pl.getPeapByID(peapID).getScopeScore()
-    #     scopeStatusAutomatic = pl.getPeapByID(peapID).getScopeStatusAutomatic()
-    #     print c, '. ', pl.getPeapByID(peapID).getName(), '-->', scopeScore, 'scopeStatusAutomatic: ',scopeStatusAutomatic
+    if SERVER == False:
+        d = datetime.datetime.utcnow()
+        now = calendar.timegm(d.utctimetuple())/(24*60*60.0)
 
-    print '\n','This is the list prioritized peaps','\n\n'
-    
+        print '\n','This is the list of peaps in scope','\n\n'
 
-    peapsByPriority = sorted(pl.list, key = lambda x: x.scopeInfo["priorityScore"], reverse = True)
-    for x in range(0, min(150, len(pl.list))):
-        peap = peapsByPriority[x]
+        c = 0
+        for peap in pl.list:
+            c+=1
+            scopeScore = peap.getScopeScore()
+            scopeStatusAutomatic = peap.getScopeStatusAutomatic()
 
-        priorityScore = peap.getPriorityScore()
-        scopeScore = peap.getScopeScore()
-
-        print x, '. ', peap.getName(), '-->', priorityScore, 'scopeScore:', scopeScore
+            print c, '. ', peap.getName(), '-->', scopeScore, 'scopeStatusAutomatic:', scopeStatusAutomatic 
 
 
-    # for x in range(0, min(len(priorityListPeapsID),150)):
-    #     peapID = scopeListPeapsID[x]
-    #     peap = pl.getPeapByID(peapID)
+        print '\n','This is the list prioritized peaps','\n\n'
+        
 
-    #     priorityScore = peap.getPriorityScore()
-    #     time_no_contact = now - peap.getLastContacted()
-    #     scopeScore = peap.getScopeScore()
-    #     print x, '. ', peap.getName(), ' priority score: ', priorityScore, 'scope score: ', scopeScore, 'lastContacted', time_no_contact
+        peapsByPriority = sorted(pl.list, key = lambda x: x.scopeInfo["priorityScore"], reverse = True)
+        for x in range(0, min(150, len(pl.list))):
+            peap = peapsByPriority[x]
 
-    tf = calendar.timegm(d.utctimetuple())
-    print 'the whole process took: ', tf - t0, ' seconds'
+            priorityScore = peap.getPriorityScore()
+            scopeScore = peap.getScopeScore()
+
+            print x, '. ', peap.getName(), '-->', priorityScore, 'scopeScore:', scopeScore
+
+        tf = calendar.timegm(d.utctimetuple())
+        print 'the whole process took: ', tf - t0, ' seconds'

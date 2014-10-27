@@ -125,6 +125,10 @@ def get_time_sender(peap):
             # print "Skipping email for model since user is in the (" + pl.list[peapID].table[id][5] + ") field: " + pl.list[peapID].table[id][7] + ""
             continue
 
+        # Filter so that the peap is also in To/From
+        if not peap.getMessageByID(id)["peapField"] in ["To", "From"]:
+            continue    
+
         # Filter down to emails where the peap is on the opposite side of the email
         # (if user in "To", require peap in "From" and vice versa, eliminate emails where both user and peap in To)
         if peap.getMessageByID(id)["userField"] == peap.getMessageByID(id)["peapField"]:

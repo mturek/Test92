@@ -206,20 +206,27 @@ class PeapList():
             print "Saving peaps for user on Parse"
             userEntry = userEntries[0]
 
+            # numInScope = 0
+            
             # Assume self.list is ordered by scopeScore (ran sortPeapsByScore recently)
-            for index in range(min(300, len(self.list))):
-                peap = self.list[index]
-                scopeStatusManual = peap.getScopeStatusManual()
-                scopeStatusAutomatic = peap.getScopeStatusAutomatic()
+            #for index in range(min(300, len(self.list))):
+            for peap in self.list:
+                #peap = self.list[index]
+                # scopeStatusManual = peap.getScopeStatusManual()
+                # scopeStatusAutomatic = peap.getScopeStatusAutomatic()
 
-                if scopeStatusManual == 1 or (scopeStatusManual == 0 and scopeStatusAutomatic == 1):
-                    peap.savePeap()
+                # if scopeStatusManual == 1 or (scopeStatusManual == 0 and scopeStatusAutomatic == 1):
+                #     numInScope += 1    
+
+                peap.savePeap()
 
             userEntry.mailboxProcessed = True
 
             d = datetime.datetime.utcnow()
             now = calendar.timegm(d.utctimetuple())
             userEntry.lastMailboxUpdate = now
+
+            # userEntry.numPeapsInScope = numInScope
 
             userEntry.save()
 
