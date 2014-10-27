@@ -18,3 +18,9 @@ Merge.pyc
 Message.pyc
 
 Score_v2.pyc
+
+*.dat
+
+*.tsv
+
+*.xlsx

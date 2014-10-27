@@ -94,6 +94,23 @@ class PeapList():
 
         print "Ending elimination with " + str(len(self.list)) + " peaps"
 
+    # Tries to identify the most desirable primary name for each Peap
+    def chooseBestNames(self):
+        for peap in self.list:
+            potentialNames = set([name for name in peap.names if not '@' in name])
+
+            deprioritizedNames = set([name for name in potentialNames if name.lower() == name.upper()])
+
+            if len(potentialNames) > len(deprioritizedNames):
+                potentialNames = potentialNames - deprioritizedNames
+
+            # If any potential names left, pick a random one for the time being
+            if len(potentialNames) > 0:
+                newName = potentialNames.pop()
+
+                print "Renaming peap from (" + peap.name + ") to (" + newName + ")"
+                peap.setPrimaryName(newName)
+
 
     def calculateScopeScores(self):
         sumOfWeightedNum = 0

@@ -321,6 +321,9 @@ if __name__ == "__main__":
 
     # 6.5 Filter the peaplist to peaps the user might be interested in
     pl.eliminatePeapsWithoutRelationship()
+
+    # 6.6 Try to set the primary name to the most meaningful from the saved names
+    pl.chooseBestNames()
     
     # 7. Calculate scores (new Zaman's algorithm). Scores are stored in each object
 
