@@ -41,7 +41,7 @@ f.close()
 
 # Print score parameters
 #
-outputFile = open("peapListScores.tsv", "w")
+outputFile = open("regressionData.tsv", "w")
 outputFile.write("\t".join(["Primary name","normalizedNumEmails","receivedEmailRatio","lastContacted","daysSinceLastContact","scopeScore","scopeStatusAutomatic"]) + "\n")
 
 d = datetime.datetime.utcnow()
