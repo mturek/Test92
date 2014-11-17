@@ -24,3 +24,5 @@ Score_v2.pyc
 *.tsv
 
 *.xlsx
+
+*.pyc
