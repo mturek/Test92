@@ -5,4 +5,6 @@
 @e.att-mail.com
 @bitofnews.com
 member@linkedin.com
+noreply@github.com
+notifications@github.com
 no6
