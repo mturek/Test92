@@ -8,7 +8,10 @@ import difflib
 import Score_v2
 import datetime
 import calendar
+import math
 import numpy as np
+
+from ServerFlag import SERVER
 
 
 class parsePeap2(Object):
@@ -55,14 +58,33 @@ class PeapList():
                 return peap
 
     def getPeapByName(self, name, fuzzy=False, min_similarity=0.9):
+        # Always do a first pass without fuzzy match:
         for peap in self.list:
             for peapName in peap.names:
-                stringSimilarity = difflib.SequenceMatcher(None, name, peapName).ratio()
-
-                if (fuzzy == False and peap.name==name) or (fuzzy == True and stringSimilarity >= min_similarity):
+                if peapName == name:
                     return peap
 
+        # If fuzzy match allowed, do a 2nd fuzzy pass as well:
+        if fuzzy == True:
+            for peap in self.list:
+                for peapName in peap.names:
+                    stringSimilarity = difflib.SequenceMatcher(None, name, peapName).ratio()
+
+                    if stringSimilarity >= min_similarity:
+                        return peap
+
         return -1
+
+
+    # def getPeapByName(self, name, fuzzy=False, min_similarity=0.9):
+    #     for peap in self.list:
+    #         for peapName in peap.names:
+    #             stringSimilarity = difflib.SequenceMatcher(None, name, peapName).ratio()
+
+    #             if (fuzzy == False and peap.name==name) or (fuzzy == True and stringSimilarity >= min_similarity):
+    #                 return peap
+
+    #     return -1
 
     def getPeapByEmail(self, email):
         for peap in self.list:
@@ -88,7 +110,7 @@ class PeapList():
                 eliminateIDs.append(peap.getID())
 
         for eliminateID in eliminateIDs:
-            print "Eliminating: " + self.getPeapByID(eliminateID).getName()
+            #print "Eliminating: " + self.getPeapByID(eliminateID).getName()
             self.removePeap(eliminateID)
 
 
@@ -108,57 +130,96 @@ class PeapList():
             if len(potentialNames) > 0:
                 newName = potentialNames.pop()
 
-                print "Renaming peap from (" + peap.name + ") to (" + newName + ")"
+                #print "Renaming peap from (" + peap.name + ") to (" + newName + ")"
                 peap.setPrimaryName(newName)
 
-
-    def calculateScopeScores(self):
+    def calculateNumEmails(self):
         sumOfWeightedNum = 0
 
-        for peap in self.list:    
-            #try:
-            if True:
-                #time, sender = Score_v2.get_time_sender(peap)
-                #parameters = Score_v2.convofit(sender, time)
-
-
-                #theta = parameters[0]
-                #A = parameters[1]
-                weightedNum = Score_v2.get_weighted_num_emails(peap)
-                receivedEmailRatio = Score_v2.get_received_email_ratio(peap)
-                
-
-                peap.scopeInfo["normalizedNumEmails"] = weightedNum
-                peap.scopeInfo["receivedEmailRatio"] = receivedEmailRatio
-
-
-                sumOfWeightedNum += weightedNum
-
-
-                #score = weightedNum
-                #score = theta * (1-theta)
-                #score = 0.5*parameters[0]+0.5*parameters[1] # Using alpha and theta
-
-                #log.write(peap.getName() +","+str(len(peap.getMessageIDs()))+","+str(NUM_DAYS)+","+str(theta)+"\n")
-
-                #peap.setScopeScore(score)
-
-            #except:
-            #    print "Exception: " + peap.getName()       
-
-        # Normalize the weightedNum
         for peap in self.list:
-            peap.scopeInfo["normalizedNumEmails"] = peap.scopeInfo["normalizedNumEmails"]/sumOfWeightedNum
-            #if peap.getScopeScore() != -1:
-            #    peap.setScopeScore(peap.getScopeScore()/sumOfWeightedNum)
+            weightedNum = Score_v2.get_weighted_num_emails(peap)
+            peap.scopeInfo["normNumEmails"] = weightedNum
 
+            sumOfWeightedNum += weightedNum
+
+        for peap in self.list:
+            peap.scopeInfo["normNumEmails"] = peap.scopeInfo["normNumEmails"] / sumOfWeightedNum
+ 
+    def calculateThetas(self):
+        for peap in self.list:
+            theta = Score_v2.get_simplified_theta_estimate(peap)
+
+            peap.scopeInfo["theta"] = theta
+
+    def calculateScopeScores(self):
         # Assign final score:
         for peap in self.list:
-            #score = <some combination of normalizedNumEmails and the ratio>
-            score = peap.scopeInfo["normalizedNumEmails"]
+            #score = <some combination of normNumEmails and the ratio>
+            score = peap.scopeInfo["normNumEmails"]
             
             peap.setScopeScore(score)
 
+
+    def calculateDurations(self, NUM_DAYS):
+        for peap in self.list:
+            times,sender = Score_v2.get_time_sender(peap)
+
+            if len(times) > 0:
+                firstContacted = min(times)
+                lastContacted = max(times)
+
+                duration = lastContacted - firstContacted
+
+                # normDuration is the duration as a percentage of the total timeframe scanned
+                normDuration = 1.0 * duration / (NUM_DAYS * 24 * 60 * 60)
+
+                # print "normDuration for", peap.name, "is", normDuration
+                
+            else:
+                normDuration = 0
+
+            peap.scopeInfo["normDuration"] = normDuration
+
+
+    def calculateDomainStats(self, root):
+        if SERVER == False:
+            free_domains = [row.strip() for row in open("domain_data/free_domains.csv")]
+        elif SERVER == True:
+            free_domains = [row.strip() for row in open("/root/nodejsPeaps/domain_data/free_domains.csv")]
+
+        # print free_domains
+        # with open("domain_data/free_domains.csv") as csvfile:
+        #     csvreader = csv.reader(csvfile, delimiter=',')
+
+        #     free_domains = list(csvreader)
+
+
+        # userDomains = []
+        # for email in root:
+        #     if '@' in email:
+        #         full_domain = email[email.index("@") + 1:]
+
+        #         if not full_domain in free_domains:
+        #             userDomains.append(full_domain)
+
+        # print "Starting with root:", root
+
+        userDomains = [email[email.index("@")+1:] for email in root if "@" in email]
+        userDomains = [domain for domain in userDomains if domain not in free_domains]
+
+        # print "Using root:", userDomains
+
+        for peap in self.list:
+            peapDomains = [email[email.index("@")+1:] for email in peap.emails if "@" in email]
+
+            # print "Peap domains for", peap.name, "are", peapDomains
+
+            numShared = len(set(userDomains) & set(peapDomains))
+            # print "Shared domains:", (set(userDomains) & set(peapDomains))
+
+            peap.scopeInfo["numSharedDomains"] = numShared
+
+            peap.scopeInfo["numAddresses"] = len(peap.emails)
 
     def sortPeapsByScopeScore(self, numInScope):
         self.list.sort(key=lambda x: x.scopeInfo["scopeScore"], reverse=True)
@@ -180,17 +241,52 @@ class PeapList():
         listScope.sort(key=lambda x: x.scopeInfo["lastContacted"], reverse=False) # organizes peaps by lastContacted
         for i in range(len(listScope)):
             listScope[i].scopeInfo["lastContactedPercentage"] = (n*1.0-i)/n*100.0
-            print listScope[i].name, " ", listScope[i].scopeInfo["lastContactedPercentage"]
+            #print listScope[i].name, " ", listScope[i].scopeInfo["lastContactedPercentage"]
 
 
         listScope.sort(key=lambda x: x.scopeInfo["scopeScore"], reverse=True)  # organizes peaps by scopeScore
         for i in range(len(listScope)):
             listScope[i].scopeInfo["scopePercentage"] = (n*1.0-i)/n*100.0
-            print listScope[i].name, " ", listScope[i].scopeInfo["scopePercentage"]
+            #print listScope[i].name, " ", listScope[i].scopeInfo["scopePercentage"]
 
         for i in range(len(listScope)):
             listScope[i].scopeInfo["priorityScore"] = 0.4 * listScope[i].scopeInfo["scopePercentage"] + 0.6 * listScope[i].scopeInfo["lastContactedPercentage"]
-            print listScope[i].name, " ", listScope[i].scopeInfo["priorityScore"]
+            #print listScope[i].name, " ", listScope[i].scopeInfo["priorityScore"]
+
+    def calculateEntropies(self, numDaysTotal, numDaysPeriod):
+        d = datetime.datetime.utcnow()
+        now = int(1.0*calendar.timegm(d.utctimetuple()))
+        beginning = now - numDaysTotal * 24 * 60 * 60
+
+        interval = numDaysPeriod * 24 * 60 * 60
+        binRanges = range(beginning, now, interval)
+
+        # Method definition for helper method
+        def calculateEntropy(dist):
+            total = sum(dist)
+
+            H = 0
+            for period in dist:
+                if period == 0:
+                    continue
+                else:
+                    H += -1.0 * period / total * math.log(1.0 * period / total)
+
+            return H
+        # End of method definition
+
+        maxEntropy = calculateEntropy([1] * (len(binRanges) - 1))
+
+        for peap in self.list:
+            times,sender = Score_v2.get_time_sender(peap)
+
+            hist,bin_edges = np.histogram(times, bins=binRanges)
+
+            normEntropy = 1.0 * calculateEntropy(hist) / maxEntropy
+
+            peap.scopeInfo["normEntropy"] = normEntropy
+
+            # print "Name:",peap.name,"normEntropy:",normEntropy
 
 
     def uploadPeapsToParse(self):
@@ -250,7 +346,7 @@ class Peap():
         self.table = {}     # Table containing the gathered data
 
         self.scopeInfo = {
-            "normalizedNumEmails":0,
+            "normNumEmails":0,
             "receivedEmailRatio":1,
             "lastContacted": -1,
             "scopeScore": -1,
@@ -411,11 +507,13 @@ class Peap():
         pPeap = parsePeap2(uemail = self.userName, name = self.name , names=self.names, ID = self.ID , emails = self.emails , 
             scopeScore = self.scopeInfo["scopeScore"], priorityScore = self.scopeInfo["priorityScore"], 
             scopeStatusAutomatic = self.scopeInfo["scopeStatusAutomatic"], scopeStatusManual = self.scopeInfo["scopeStatusManual"],
-            normalizedNumEmails = self.scopeInfo["normalizedNumEmails"], receivedEmailRatio = self.scopeInfo["receivedEmailRatio"],
+            normalizedNumEmails = self.scopeInfo["normNumEmails"], receivedEmailRatio = self.scopeInfo["receivedEmailRatio"],
             lastContacted = self.scopeInfo["lastContacted"], context = self.context)
         
+        # Rename normalizedNumEmails to normNumEmails when switching to parsePeap3
+
         """ DON'T SAVE ON PARSE FOR THE TIME BEING """
         pPeap.save()
         """ REMOVE WHEN DONE DEBUGGING """
 
-        print "Object ID", pPeap.objectId
+        #print "Object ID", pPeap.objectId

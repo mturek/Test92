@@ -163,7 +163,32 @@ def get_received_email_ratio(peap):
     else:
         return 1
 
+def get_simplified_theta_estimate(peap):
+    RECEIVED = 0
+    SENT = 1
+    time, sender = get_time_sender(peap)
 
+    # u ... user, v ... peap
+    nuu, nuv, nvu, nvv = 0,0,0,0
+    for i in range(len(sender) - 1):
+        if sender[i] == RECEIVED and sender[i+1] == RECEIVED:
+            nvv += 1
+        elif sender[i] == RECEIVED and sender[i+1] == SENT:
+            nvu += 1
+        elif sender[i] == SENT and sender[i+1] == RECEIVED:
+            nuv += 1
+        elif sender[i] == SENT and sender[i+1] == SENT:
+            nuu += 1
+
+    #print nvv, nvu, nuv, nuu        
+
+    if (nuu + nvu + nuv + nvv) > 0:
+        simplifiedModelTheta = 1.0 * (nuu + nvu) / (nuu + nvu + nuv + nvv)
+    else:
+        simplifiedModelTheta = 0
+
+
+    return simplifiedModelTheta
 
 def get_weighted_num_emails(peap):
     weighted_num_emails = 0

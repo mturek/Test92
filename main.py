@@ -25,9 +25,9 @@ import os
 
 import sys
 
-NUM_DAYS = 10
+NUM_DAYS = 360*5
 
-SERVER = True
+from ServerFlag import SERVER
 
 def getAuthPythonFromString(jsonString):
     
@@ -123,11 +123,10 @@ def registerToParse():
 
     register('z0tVwPXHKH0vpQ1elZuedq9yhEfdsuyZzB6gcVtV','4tSjXFZw3rS20QKI6e2fUJH4jwqI9eEDJV7v4wWF')
 
-
-def getQuery(days, type):
+def getQuery(days, type, forceItem):
 
     """
-        ARG: number of months of the query
+        ARG: number of days of the query
 
         RETURN : string of the query
     """
@@ -139,11 +138,13 @@ def getQuery(days, type):
 
     query = 'after:' + t_after.strftime("%Y/%m/%d") + ' before:' + today.strftime("%Y/%m/%d") + ' -in:chats'
 
+    if forceItem != "":
+        query += (' ' + forceItem)
+
     if SERVER == False:
         black_list = [line.strip() for line in open('black_list.txt')]     # don't retrieve emails from the black_list.txt
     elif SERVER == True:
         black_list = [line.strip() for line in open('/root/nodejsPeaps/black_list.txt')]
-
 
     for lines in black_list:
         query = query + " -" + lines
@@ -156,6 +157,39 @@ def getQuery(days, type):
         query = query + ' -in:sent'
 
     return query
+
+# def getQuery(days, type):
+
+#     """
+#         ARG: number of months of the query
+
+#         RETURN : string of the query
+#     """
+#     user = 'me'
+
+#     today = datetime.date.today()
+#     delta = datetime.timedelta(days)
+#     t_after = today - delta
+
+#     query = 'after:' + t_after.strftime("%Y/%m/%d") + ' before:' + today.strftime("%Y/%m/%d") + ' -in:chats'
+
+#     if SERVER == False:
+#         black_list = [line.strip() for line in open('black_list.txt')]     # don't retrieve emails from the black_list.txt
+#     elif SERVER == True:
+#         black_list = [line.strip() for line in open('/root/nodejsPeaps/black_list.txt')]
+
+
+#     for lines in black_list:
+#         query = query + " -" + lines
+#     # print query
+
+#     if type == 'sent':
+#         query = query + ' in:sent'
+
+#     elif type == 'inbox':
+#         query = query + ' -in:sent'
+
+#     return query
 
 
 def getUserName(service):
@@ -242,14 +276,8 @@ def findRoot(serviceGmail, serviceUser):  # Edited by FH: uses the user
     return root
 
 
-
-
-if __name__ == "__main__":
-
-    f = open('/root/nodejsPeaps/'+"test"+'_log.txt','w')
-    f.write("Started running main.py")
-    f.close()
-    
+#@profile
+def main():
 
     # 0. Register the application to Parse
 
@@ -272,7 +300,7 @@ if __name__ == "__main__":
     #service = getAuthPythonFromString(sys.argv[1])
 
     # 3. Get Query
-    query_all = getQuery(NUM_DAYS, 'all')
+    # query_all = getQuery(NUM_DAYS, 'all')
 
 
     # 4. Run the query
@@ -314,7 +342,41 @@ if __name__ == "__main__":
 
     userTest = service[1].people().get(userId='me').execute()
 
-    response_all = Message.ListMessagesMatchingQuery(service[0], user, query_all)
+
+    # 4.75. Set up the query and get all the messages that match
+    query_sent = getQuery(NUM_DAYS, 'sent', "")
+    response_sent = Message.ListMessagesMatchingQuery(service[0], user, query_sent)
+
+    recipients = Message.extractRecipients(response_sent, user, service[0])
+
+    # print "Recipients", recipients
+
+    # Group recipients into 10s to decrease the number of queries
+    accumulatedRecipients = []
+    for i in range(0, len(recipients), 10):
+        accumulatedRecipients.append(" OR ".join(recipients[i:i+10]))
+
+    # print "Accumulated recipients:", accumulatedRecipients
+
+
+    emails_to_process = set()
+    for recipient_email in accumulatedRecipients:
+        query_section = getQuery(NUM_DAYS, 'all', recipient_email)
+        response_section = Message.ListMessagesMatchingQuery(service[0], user, query_section)
+
+        for x in response_section:
+            emails_to_process.add( (x["id"], x["threadId"]) )
+
+
+    response_all = [{'id': item[0], 'threadId': item[1]} for item in emails_to_process]
+
+    #query_all = getQuery(NUM_DAYS, 'all', "")
+    #response_all = Message.ListMessagesMatchingQuery(service[0], user, query_all)
+
+
+
+
+
 
     root = findRoot(service[0],service[1])
 
@@ -339,13 +401,25 @@ if __name__ == "__main__":
 
 
     # Save another pickle for debugging purposes
-    if SERVER == False:
-        f2 = open("mtPeapList_noscore.dat","w")
-        pickle.dump(pl, f2)
-        f2.close()
+    # if SERVER == False:
+    #     f2 = open("mtPeapList_noscore.dat","w")
+    #     pickle.dump(pl, f2)
+    #     f2.close()
 
 
     print 'Nr. of peaps: ', len(pl.list)
+
+
+
+    # Calculate all the score components
+    pl.calculateNumEmails()
+    pl.calculateThetas()
+    pl.calculateEntropies(NUM_DAYS, 7)
+    pl.calculateDomainStats(root)
+    pl.calculateDurations(NUM_DAYS)
+
+
+
     pl.calculateScopeScores()
     
     #calculateScopeScore(pl)
@@ -363,6 +437,8 @@ if __name__ == "__main__":
     #priorityListPeapsID, priorityListValues = calculatePriorityScore(pl)
     pl.calculatePriorityScores(150)  # Edited by FH
 
+    pl.calculateEntropies(NUM_DAYS, 7)
+
     # 9.5 - Save the peaps in scope to the parse server
     pl.uploadPeapsToParse()
 
@@ -374,6 +450,23 @@ if __name__ == "__main__":
         f = open("mtPeapList.dat", "w")
         pickle.dump(pl, f)
         f.close()    
+
+    if SERVER == True and userName == 'mturek92@gmail.com':
+        f = open("/root/nodejsPeaps/peapLists/mt.dat", "w")
+        pickle.dump(pl, f)
+        f.close()
+
+    if SERVER == True and userName == 'nalbana@gmail.com':
+        f = open("/root/nodejsPeaps/peapLists/an.dat", "w")
+        pickle.dump(pl, f)
+        f.close()
+
+    if SERVER == True and userName == 'francisco.hidalgo@gmail.com':
+        f = open("/root/nodejsPeaps/peapLists/fh.dat", "w")
+        pickle.dump(pl, f)
+        f.close()
+
+
 
 
     if SERVER == False:
@@ -405,3 +498,14 @@ if __name__ == "__main__":
 
         tf = calendar.timegm(d.utctimetuple())
         print 'the whole process took: ', tf - t0, ' seconds'
+
+    if SERVER == True:
+        print 'finished successfully'
+
+        d = datetime.datetime.utcnow()
+        tf = calendar.timegm(d.utctimetuple())
+        print 'the whole process took: ', tf - t0, ' seconds'
+
+
+if __name__ == "__main__":
+    main()
